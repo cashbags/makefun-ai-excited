@@ -67,7 +67,8 @@
  * Output: $MAKEFUN_OUTPUT_DIR/entry.png (default /output/entry.png)
  */
 
-import { copyFileSync, existsSync, mkdirSync, statSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -75,7 +76,9 @@ const MAX_BYTES = 1024 * 1024; // competition gate: at most 1 MiB
 
 const here = dirname(fileURLToPath(import.meta.url));
 const source = join(here, "entry.png");
-const outputDir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
+// An empty MAKEFUN_OUTPUT_DIR is treated as unset: otherwise join("", ...)
+// would silently drop the output in the working directory.
+const outputDir = process.env.MAKEFUN_OUTPUT_DIR?.trim() || "/output";
 const target = join(outputDir, "entry.png");
 
 if (!existsSync(source)) {
@@ -87,14 +90,26 @@ if (sourceSize === 0 || sourceSize > MAX_BYTES) {
   console.error(`source image is ${sourceSize} bytes; must be 1..${MAX_BYTES} bytes`);
   process.exit(1);
 }
+// Guard against shipping a corrupt or non-JPEG file: a JPEG starts with
+// the SOI marker FF D8. The prepared entry is a JPEG, so anything else
+// here means the wrong file is sitting next to this script.
+const sourceBytes = readFileSync(source);
+if (sourceBytes[0] !== 0xff || sourceBytes[1] !== 0xd8) {
+  console.error(`source image is not a JPEG (missing FF D8 marker): ${source}`);
+  process.exit(1);
+}
+const sourceHash = createHash("sha256").update(sourceBytes).digest("hex");
 
 mkdirSync(outputDir, { recursive: true });
 copyFileSync(source, target);
 
-// Confirm the copy landed intact before declaring success.
-const copiedSize = statSync(target).size;
-if (copiedSize !== sourceSize) {
-  console.error(`copy mismatch: wrote ${copiedSize} bytes, expected ${sourceSize}`);
+// Confirm the copy landed intact: same size AND same sha256 as the source.
+const copiedBytes = readFileSync(target);
+if (
+  copiedBytes.length !== sourceSize ||
+  createHash("sha256").update(copiedBytes).digest("hex") !== sourceHash
+) {
+  console.error(`copy mismatch: ${target} does not match ${source}`);
   process.exit(1);
 }
-console.log(`wrote ${target} (${copiedSize} bytes)`);
+console.log(`wrote ${target} (${copiedBytes.length} bytes, sha256 ${sourceHash.slice(0, 12)}…)`);
