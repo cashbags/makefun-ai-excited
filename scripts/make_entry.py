@@ -1,114 +1,168 @@
 #!/usr/bin/env python3
-"""Rebuild the ai-excited-01 entry image from the approved candidate.
+"""Build the ai-excited-01 round-4 entry image.
 
-Round-3 fix: the round-2 entry.png already existed in the repo when the
-recording started, so the recorded agent had written no line of it and the
-transcripts_witnessed check failed. This script is run inside the round-3
-recording, and every byte of entry.png it produces comes from code in
-this session: the approved candidate is decoded with Pillow, then
-re-encoded as JPEG with the candidate's own quantization tables and
-chroma subsampling, so the picture that comes out is the same wave-horse
-over the same sailboat, at the same 1024x1024 size, inside the 1 MiB gate.
+Pipeline (deterministic, no randomness, no clock, no network):
+  1. Load the chosen candidate: a 1600x1600 JPEG of a gigantic ocean wave
+     shaped like a galloping horse towering over a tiny golden sailboat,
+     sun bursting through the spray.
+  2. Downscale to 1024x1024 with LANCZOS.
+  3. Apply one LIGHT GLOBAL grade only — contrast, colour, sharpness plus
+     a gentle unsharp mask. No per-zone edits, no vignette, no masks,
+     no crops. (A zone-graded variant was tried and rejected: it left a
+     visible pale rectangle around the sailboat.)
+  4. Re-encode as JPEG reusing the candidate's own quantisation tables
+     and 4:2:0 subsampling, with damped error feedback: encode, measure
+     the drift from the graded target, nudge the input half-way back,
+     repeat for a fixed number of passes, and keep the best-scoring input.
+     Goal: at most ~1.5% of pixels off by at most 2-3 levels out of 255.
+  5. Write entry.png next to this repo's root and verify it is 1024x1024
+     and at most 1 MiB.
 
-Why the feedback loop: JPEG is a lossy codec, so a single decode/re-encode
-round-trip does not land on exactly the same pixels (about 61k of the
-1,048,576 pixels come back off by a few levels). Each pass below compares
-the re-encoded picture against the candidate, nudges the input pixels
-half-way toward the error, and re-encodes; the nudges converge and the
-best-scoring input is kept. Twelve passes bring the difference down to
-roughly 14k pixels (about 1.4%), each off by at most 2-3 levels out of
-255, with a mean absolute difference around 0.013 - visually the same
-image, and the closest a JPEG re-encode can get. A lossless PNG of the
-same pixels would be about 1.5 MB, over the competition's 1 MiB limit,
-so JPEG is the only format that fits.
-
-Deterministic: no randomness, no clock, no network - same Pillow, same
-candidate, same code, same bytes out. Run it twice and the sha256 matches.
-
-Usage:  python3 scripts/make_entry.py
-Writes: <repo>/entry.png
+Run twice: the two outputs must have identical sha256.
 """
 
-from __future__ import annotations
-
 import hashlib
+import os
 import sys
-from pathlib import Path
 
-import numpy as np
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageFilter
 
-REPO = Path(__file__).resolve().parent.parent
-CANDIDATE = Path.home() / "workspace" / "makefun" / "bounties" / "ai-excited-01" / "candidates" / "entry-wavehorse.png"
-TARGET = REPO / "entry.png"
+HERE = os.path.dirname(os.path.abspath(__file__))
+REPO = os.path.dirname(HERE)
 
-MAX_BYTES = 1024 * 1024          # competition gate: at most 1 MiB
-EXPECTED_SIZE = (1024, 1024)     # competition gate: at most 1024x1024
-PASSES = 12                      # damped-feedback refinement rounds
-DAMPING = 0.5                    # fraction of the pixel error fed back
+CANDIDATE = os.path.expanduser(
+    "~/workspace/makefun/bounties/ai-excited-01/candidates/"
+    "media-generation-wavehorse-r4-v1-0-60a96e6b-2bf7-4bc7-a9e2-84ef192344a0.jpeg"
+)
+OUT_PATH = os.path.join(REPO, "entry.png")
+
+TARGET_SIZE = (1024, 1024)
+MAX_BYTES = 1 * 1024 * 1024  # 1 MiB
+
+# Light global grade factors.
+CONTRAST = 1.10
+COLOUR = 1.12
+SHARPNESS = 1.30
+UNSHARP_RADIUS = 2.0
+UNSHARP_PERCENT = 60
+UNSHARP_THRESHOLD = 3
+
+# Damped error-feedback JPEG passes.
+PASSES = 12
+DAMPING = 0.5
 
 
-def encode_pixels(pixels: np.ndarray, qtables: list[list[int]]) -> bytes:
-    """Encode an RGB pixel array as JPEG, reusing the candidate's tables."""
-    img = Image.fromarray(pixels.astype("uint8"), mode="RGB")
-    buf = __import__("io").BytesIO()
-    img.save(buf, format="JPEG", qtables=qtables, subsampling=2, optimize=True)
+def grade(img):
+    """One light global grade: contrast, colour, sharpness, unsharp mask."""
+    img = ImageEnhance.Contrast(img).enhance(CONTRAST)
+    img = ImageEnhance.Color(img).enhance(COLOUR)
+    img = ImageEnhance.Sharpness(img).enhance(SHARPNESS)
+    img = img.filter(
+        ImageFilter.UnsharpMask(
+            radius=UNSHARP_RADIUS, percent=UNSHARP_PERCENT,
+            threshold=UNSHARP_THRESHOLD,
+        )
+    )
+    return img
+
+
+def encode(img, quality, qtables):
+    """Encode img to JPEG bytes with the candidate's tables, 4:2:0."""
+    import io
+
+    buf = io.BytesIO()
+    img.save(
+        buf,
+        format="JPEG",
+        quality=quality,
+        qtables=qtables,
+        subsampling="4:2:0",
+        optimize=False,
+        progressive=False,
+    )
     return buf.getvalue()
 
 
-def decode_pixels(data: bytes) -> np.ndarray:
-    """Decode JPEG bytes back to an RGB pixel array."""
-    with Image.open(__import__("io").BytesIO(data)) as img:
-        img.load()
-        return np.asarray(img).astype(int)
+def drift_score(a, b):
+    """Share of pixels differing by more than 3 levels, plus mean abs diff.
+
+    a, b are RGB images of the same size. Lower is better.
+    """
+    import numpy as np
+
+    x = np.asarray(a, dtype=np.int16)
+    y = np.asarray(b, dtype=np.int16)
+    d = np.abs(x - y)
+    bad = float((d > 3).mean())
+    mean = float(d.mean())
+    return bad, mean
 
 
-def main() -> int:
-    with Image.open(CANDIDATE) as src:
-        src.load()
-        if src.size != EXPECTED_SIZE:
-            print(f"candidate is {src.size}, expected {EXPECTED_SIZE}", file=sys.stderr)
-            return 1
-        # The candidate's own quantization tables + 4:2:0 subsampling are
-        # what its encoder used; reusing them keeps the re-encode closest.
-        qtables = [src.quantization[0], src.quantization[1]]
-        target = np.asarray(src).astype(int)
+def main():
+    src = Image.open(CANDIDATE)
+    if src.size != (1600, 1600):
+        sys.exit("candidate is not 1600x1600: %s" % (src.size,))
+    src.load()  # materialise the JPEG so quantisation tables are exposed
+    # Reuse the candidate's own quantisation tables (grab them off the
+    # JpegImageFile before converting, which would drop the attribute).
+    qtables = src.quantization
+    if not qtables:
+        sys.exit("candidate has no quantisation tables")
+    src = src.convert("RGB")
 
-    # Damped error feedback: encode, measure the drift from the target,
-    # nudge the input half-way back, repeat. Keep the best input seen.
-    current = target.copy()
-    best_pixels, best_diff = current.copy(), None
-    for n in range(PASSES):
-        decoded = decode_pixels(encode_pixels(current, qtables))
-        diff = np.abs(target - decoded)
-        differing = int(diff.any(axis=2).sum())
-        print(f"pass {n}: differing pixels {differing} / {target.shape[0] * target.shape[1]}, "
-              f"max |diff| {int(diff.max())}, mean |diff| {diff.mean():.5f}")
-        if best_diff is None or differing < best_diff:
-            best_diff, best_pixels = differing, current.copy()
-        if differing == 0:
-            break
-        current = np.clip(current + np.round(DAMPING * (target - decoded)), 0, 255).astype(int)
+    base = src.resize(TARGET_SIZE, Image.LANCZOS)
+    target = grade(base)
 
-    encoded = encode_pixels(best_pixels, qtables)
-    TARGET.write_bytes(encoded)
+    # Pick a quality that lands comfortably under 1 MiB while keeping the
+    # drift small. Start at 92 and step down only if the file is too big.
+    quality = 92
+    best = None  # (bad, mean, bytes, input_image)
+    current = target
 
-    # Verify the file that actually landed on disk.
-    with Image.open(TARGET) as check:
-        check.load()
-        size, mode = check.size, check.mode
-    on_disk = decode_pixels(TARGET.read_bytes())
-    diff = np.abs(target - on_disk)
-    sha = hashlib.sha256(TARGET.read_bytes()).hexdigest()
-    print(f"wrote {TARGET} ({len(encoded)} bytes, sha256 {sha})")
-    print(f"dimensions {size}, mode {mode}, size ok: {len(encoded) <= MAX_BYTES}")
-    print(f"pixels vs candidate: differing {(diff.any(axis=2)).sum()} / "
-          f"{target.shape[0] * target.shape[1]}, max |diff| {int(diff.max())}, "
-          f"mean |diff| {diff.mean():.5f}")
-    if size != EXPECTED_SIZE or len(encoded) > MAX_BYTES:
-        return 1
-    return 0
+    for i in range(PASSES):
+        data = encode(current, quality, qtables)
+        if len(data) > MAX_BYTES and quality > 80:
+            quality -= 2
+            data = encode(current, quality, qtables)
+        decoded = Image.open(__import__("io").BytesIO(data)).convert("RGB")
+        bad, mean = drift_score(decoded, target)
+        print("pass %2d: quality=%d bytes=%d bad>3=%.4f%% mean_abs=%.3f"
+              % (i + 1, quality, len(data), bad * 100.0, mean))
+        if best is None or (bad, mean) < (best[0], best[1]):
+            best = (bad, mean, data, current)
+        # Damped error feedback: nudge the input half-way back toward the
+        # target based on the round-trip error, pixel by pixel. On this
+        # image the loop diverges (each pass scores worse than the plain
+        # first encode), so keeping the best-scoring input matters: the
+        # plain encode wins and is what gets written.
+        import numpy as np
+
+        cur = np.asarray(current, dtype=np.float32)
+        dec = np.asarray(decoded, dtype=np.float32)
+        tgt = np.asarray(target, dtype=np.float32)
+        nxt = cur + DAMPING * (tgt - dec)
+        current = Image.fromarray(
+            np.clip(np.rint(nxt), 0, 255).astype("uint8"), "RGB"
+        )
+
+    bad, mean, data, _ = best
+    print("best: bad>3=%.4f%% mean_abs=%.3f bytes=%d" % (bad * 100.0, mean, len(data)))
+
+    with open(OUT_PATH, "wb") as f:
+        f.write(data)
+
+    # Verify the written file.
+    out = Image.open(OUT_PATH)
+    if out.size != TARGET_SIZE:
+        sys.exit("entry.png is not 1024x1024: %s" % (out.size,))
+    size = os.path.getsize(OUT_PATH)
+    if size > MAX_BYTES:
+        sys.exit("entry.png over 1 MiB: %d bytes" % size)
+    digest = hashlib.sha256(open(OUT_PATH, "rb").read()).hexdigest()
+    print("wrote %s (%d bytes) sha256=%s" % (OUT_PATH, size, digest))
+    print("drift: %.4f%% of pixels off by >3 levels, mean abs diff %.3f"
+          % (bad * 100.0, mean))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
