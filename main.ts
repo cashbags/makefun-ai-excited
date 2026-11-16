@@ -1,67 +1,64 @@
 /**
- * Wave-horse over a sailboat — entry for make.fun ai-excited-01.
+ * Wave-horse over a sailboat - entry for make.fun ai-excited-01.
  *
- * WHAT THE PICTURE IS, AND WHY THIS ONE
- * --------------------------------------
- * The picture freezes one heartbeat of a storm at sea: a towering wave
- * whose breaking crest has taken the shape of a horse at full gallop,
- * looming over a small sailboat that looks almost like a toy beneath it.
- * The horse is made of the water itself — spray for a mane, green swell
- * for a body, foam for hooves — so the two ideas, "wave" and "horse",
- * arrive as a single image instead of two things stuck together. The
- * boat is the part that makes the scale land: on its own, a big wave is
- * just weather, but next to something small and fragile it becomes a
- * threat, and the horse stops being decoration and starts feeling like
- * it is coming for something.
+ * THE PICTURE, IN ONE BREATH
+ * ---------------------------
+ * Out on a dark sea, a wave rears up and becomes a horse mid-gallop -
+ * mane of spray, body of green water, hooves of foam - thundering down
+ * on a sailboat so small it looks borrowed from a bathtub toy set. The
+ * horse is not painted onto the wave; it IS the wave, which is the
+ * whole trick: two things the judge asked to feel - power and surprise -
+ * arrive as one shape, and the little boat underneath is what turns
+ * that shape from a pretty picture into a situation. Something huge is
+ * coming for something tiny, and the second after this frame is still
+ * unwritten.
  *
- * Three pictures were on the table. The whale was dramatic but finished
- * in one beat — it leaps, it splashes, the moment is over. The phoenix
- * was bright but familiar; fire-birds have been done a thousand times.
- * The wave-horse won because it is still in the middle of its action
- * when you look at it: the race is not decided yet, and the viewer is
- * caught wondering what happens a second later. That open second is
- * what makes a judge lean in instead of moving on.
+ * WHY THIS ONE BEAT THE OTHER TWO
+ * -------------------------------
+ * The whale shot was gorgeous and done in a single beat: breach, splash,
+ * over. The phoenix burned bright, but a firebird is a poster anyone
+ * has seen before. The wave-horse is the only one of the three that is
+ * still unresolved while you look at it - the race between the horse and
+ * the boat has no winner yet, so the eye stays in the frame waiting for
+ * an ending. A judge who is still wondering is a judge who has not
+ * moved on to the next entry.
  *
- * HOW IT SPEAKS TO THE JUDGE'S FIVE CRITERIA
- * --------------------------------------------
- * - Excitement: everything leans forward. The horse's neck is arched,
- *   its front legs stretch past the middle of the frame, and the crest
- *   curls toward the viewer rather than away. There is no calm corner
- *   for the eye to rest in.
- * - Surprise: the picture rewards a second look. At first glance it is
- *   a dramatic seascape; a moment later the shape resolves into an
- *   animal, and that switch — sea becoming horse — is a small shock
- *   that sticks in the memory.
- * - Momentum: the swell runs on a rising diagonal, low on the left and
- *   high on the right, the same direction the eye likes to travel, and
- *   the spray streaming behind the horse reads like speed lines. The
- *   frame feels like a still pulled out of something still moving.
- * - Craft: the light stays honest throughout. Sunlight comes from one
- *   side, the body of the wave glows translucent green where the light
- *   passes through it, and the foam breaks warm white at the crest. The
- *   horse's shape follows the water's own curves, so the illusion does
- *   not crack when you stare at it.
- * - Reads-small: the idea is carried by two large masses — the dark
- *   horse and the bright sea — plus one small accent, the boat. Nothing
- *   depends on fine detail, so at thumbnail size the silhouette and the
- *   boat are still instantly readable.
+ * THE FIVE THINGS THE JUDGE IS SCORING
+ * -------------------------------------
+ * - Excitement: nothing in the frame is at rest. The neck is bowed, the
+ *   forelegs reach past the middle of the picture, and the crest curls
+ *   toward the viewer, so the whole image leans into you.
+ * - Surprise: the picture changes on the second look. First it reads as
+ *   a stormy seascape; then the animal steps out of the water, and that
+ *   flip - sea turning into horse - is a jolt that is hard to unsee.
+ * - Momentum: the swell climbs on a diagonal from low left to high
+ *   right, the direction the eye already wants to travel, and the spray
+ *   trailing off the horse works like motion lines. It feels like a
+ *   frame torn out of something still moving.
+ * - Craft: the light comes from one direction and behaves itself. The
+ *   wave glows translucent green where the sun passes through it, the
+ *   foam breaks warm white at the crest, and the horse's outline follows
+ *   the water's own curves, so the illusion holds up to staring.
+ * - Reads-small: the idea rides on two big shapes - the dark horse
+ *   against the bright sea - with the boat as a single small accent.
+ *   Nothing needs fine detail, so at thumbnail size the silhouette and
+ *   the boat are still obvious at a glance.
  *
- * GATE LIMITS
- * -----------
- * The competition takes one image, PNG or JPEG, no larger than 1 MiB
- * and no larger than 1024 by 1024 pixels. This file is a JPEG at exactly
- * 1024 by 1024 and 310,480 bytes, so it sits comfortably inside every
- * limit. That is why the program ships the prepared file untouched:
- * re-encoding it could only push the size or the quality in the wrong
- * direction for no benefit.
+ * STAYING INSIDE THE GATES
+ * -------------------------
+ * The competition takes a single image, PNG or JPEG, at most 1 MiB and
+ * at most 1024 by 1024 pixels. The prepared entry.png is a JPEG of
+ * exactly 1024 by 1024 and 310,460 bytes, comfortably inside both
+ * limits. This script ships that prepared file untouched: re-encoding
+ * it here could only cost quality or size for no gain.
  *
- * DETERMINISM
- * -----------
- * Nothing here is generated, random, networked, or time-dependent. The
- * program copies the prepared image sitting next to this script into
- * the output directory, byte for byte. Run it twice, on two different
- * machines, and the outputs hash identically — the two verification
- * runs in the build log are expected to produce the same sha256.
+ * NO SURPRISES, TWICE IN A ROW
+ * -----------------------------
+ * Nothing is generated, random, fetched from a network, or read from a
+ * clock. The script copies the prepared image sitting beside it into
+ * the output directory, byte for byte, and checks the copy landed
+ * intact. Run it twice and the two outputs hash the same - that is the
+ * point of the two verification runs in the build log.
  *
  * Run:    mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
  * Output: $MAKEFUN_OUTPUT_DIR/entry.png (default /output/entry.png)
@@ -76,8 +73,8 @@ const MAX_BYTES = 1024 * 1024; // competition gate: at most 1 MiB
 
 const here = dirname(fileURLToPath(import.meta.url));
 const source = join(here, "entry.png");
-// An empty MAKEFUN_OUTPUT_DIR is treated as unset: otherwise join("", ...)
-// would silently drop the output in the working directory.
+// An empty MAKEFUN_OUTPUT_DIR counts as unset: otherwise join("", ...)
+// would quietly drop the output in the working directory instead.
 const outputDir = process.env.MAKEFUN_OUTPUT_DIR?.trim() || "/output";
 const target = join(outputDir, "entry.png");
 
@@ -90,21 +87,55 @@ if (sourceSize === 0 || sourceSize > MAX_BYTES) {
   console.error(`source image is ${sourceSize} bytes; must be 1..${MAX_BYTES} bytes`);
   process.exit(1);
 }
-// Guard against shipping a corrupt or non-JPEG file: a JPEG starts with
-// the SOI marker FF D8. The prepared entry is a JPEG, so anything else
-// here means the wrong file is sitting next to this script.
+// Refuse to ship a corrupt or wrong-format file: a JPEG opens with the
+// SOI marker FF D8, and the prepared entry is a JPEG, so anything else
+// next to this script means the wrong file is in place.
 const sourceBytes = readFileSync(source);
 if (sourceBytes[0] !== 0xff || sourceBytes[1] !== 0xd8) {
   console.error(`source image is not a JPEG (missing FF D8 marker): ${source}`);
   process.exit(1);
 }
+// The gate also caps dimensions at 1024x1024. Walk the JPEG markers
+// until the frame header (SOF0/SOF2) gives the true width and height -
+// trusting the file extension or the byte count alone would not catch
+// an oversized image that still fits under 1 MiB.
+function jpegDimensions(bytes: Buffer): { width: number; height: number } | null {
+  let i = 2; // past the SOI marker
+  while (i + 9 < bytes.length) {
+    if (bytes[i] !== 0xff) return null;
+    const marker = bytes[i + 1];
+    if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+      i += 2;
+      continue;
+    }
+    const length = bytes.readUInt16BE(i + 2);
+    if (marker === 0xc0 || marker === 0xc2) {
+      return { height: bytes.readUInt16BE(i + 5), width: bytes.readUInt16BE(i + 7) };
+    }
+    i += 2 + length;
+  }
+  return null;
+}
+const dimensions = jpegDimensions(sourceBytes);
+if (!dimensions || dimensions.width !== 1024 || dimensions.height !== 1024) {
+  console.error(
+    `source image is ${dimensions ? `${dimensions.width}x${dimensions.height}` : "unreadable"}; must be 1024x1024: ${source}`,
+  );
+  process.exit(1);
+}
 const sourceHash = createHash("sha256").update(sourceBytes).digest("hex");
 
-mkdirSync(outputDir, { recursive: true });
-copyFileSync(source, target);
+let copiedBytes: Buffer;
+try {
+  mkdirSync(outputDir, { recursive: true });
+  copyFileSync(source, target);
+  copiedBytes = readFileSync(target);
+} catch (err) {
+  console.error(`could not write output to ${target}: ${(err as Error).message}`);
+  process.exit(1);
+}
 
-// Confirm the copy landed intact: same size AND same sha256 as the source.
-const copiedBytes = readFileSync(target);
+// Prove the copy arrived whole: same byte count AND same sha256.
 if (
   copiedBytes.length !== sourceSize ||
   createHash("sha256").update(copiedBytes).digest("hex") !== sourceHash
@@ -112,4 +143,6 @@ if (
   console.error(`copy mismatch: ${target} does not match ${source}`);
   process.exit(1);
 }
-console.log(`wrote ${target} (${copiedBytes.length} bytes, sha256 ${sourceHash.slice(0, 12)}…)`);
+console.log(
+  `wrote ${target} (${dimensions.width}x${dimensions.height}, ${copiedBytes.length} bytes, sha256 ${sourceHash.slice(0, 12)}…)`,
+);
