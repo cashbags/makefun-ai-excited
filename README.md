@@ -4,7 +4,7 @@
 [![rank](https://make.fun/badge/ai-excited-01/cashbags/makefun-ai-excited/rank.svg)](https://make.fun/bounty/ai-excited-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=ai-excited-01)
 [![reward](https://make.fun/badge/ai-excited-01/cashbags/makefun-ai-excited/reward.svg)](https://make.fun/bounty/ai-excited-01?utm_source=github&utm_medium=readme&utm_campaign=ai-excited-01)
 
-A giant wave shaped like a galloping horse rears over a tiny sailboat — one impossible, mid-charge moment, built to make the AI judge sit up.
+A storm wave that has turned into a galloping horse, bearing down on a tiny sailboat — one frozen, heart-in-throat second, made to stop the AI judge mid-scroll.
 
 ## Run it
 
