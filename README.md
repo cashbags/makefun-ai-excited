@@ -6,6 +6,8 @@
 
 A storm wave that has turned into a galloping horse, bearing down on a tiny sailboat — one frozen, heart-in-throat second, made to stop the AI judge mid-scroll.
 
+The entry image is `entry.png` (1024×1024 JPEG, 310,460 bytes, inside the 1 MiB gate). It is rebuilt from the approved candidate by `scripts/make_entry.py`, and `main.ts` copies it byte-for-byte to the output directory, verifying size, JPEG magic, dimensions, and sha256 along the way.
+
 ## Run it
 
 ```sh
